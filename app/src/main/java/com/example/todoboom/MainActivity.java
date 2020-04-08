@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -36,6 +37,15 @@ public class MainActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        initializeRecyclerView();
+        logTodoListSize();
+    }
+
+    private void logTodoListSize() {
+        Log.e("Todo list Size is: ", Integer.toString(todoItems.size())); //todo change to debug?
+    }
+
+    private void initializeRecyclerView() {
         recyclerView = (RecyclerView) findViewById(R.id.my_text_view);
 
         // use this setting to improve performance if you know that changes
@@ -47,7 +57,7 @@ public class MainActivity extends AppCompatActivity implements
         recyclerView.setLayoutManager(layoutManager);
 
         // specify an adapter (see also next example)
-        todoItems = new ArrayList<>();
+        todoItems = MyPreferences.loadData(getApplicationContext());
         mAdapter = new MyAdapter(todoItems, this);
         recyclerView.setAdapter(mAdapter);
     }
@@ -65,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements
             mAdapter.notifyItemChanged(todoItems.size() - 1);
             et.setText("");
         }
+        MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
         final View activityRootView = findViewById(R.id.activityRoot);
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
@@ -110,6 +121,9 @@ public class MainActivity extends AppCompatActivity implements
             todoItem.setDescription("done: " + todoText);
             mAdapter.notifyDataSetChanged();
             todoItem.setIsDone(true);
+            MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
         }
+
     }
+
 }
