@@ -54,6 +54,9 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * This method initializes the RecyclerView.
+     */
     private void initializeRecyclerView() {
         recyclerView = (RecyclerView) findViewById(R.id.my_text_view);
 
