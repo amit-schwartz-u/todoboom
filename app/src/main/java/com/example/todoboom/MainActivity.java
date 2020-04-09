@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements
         recyclerView.setAdapter(mAdapter);
     }
 
-    public void btnCreateOnClick(View view) {
+    public void createButtonOnClick(View view) {
         shouldHideKeyBoard = true;
         EditText et = findViewById(R.id.etInputText);
         String inputText = et.getText().toString();
