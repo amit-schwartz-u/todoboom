@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -23,14 +24,14 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements
-        MyAdapter.OnTodoListener {
+        MyAdapter.OnTodoListener, MyAdapter.OnTodoLongListener {
 
     private static final String EMPTY_MSG = "you can't create an empty TODO item, oh silly!";
     private ArrayList<TodoItem> todoItems;
     private RecyclerView recyclerView;
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager layoutManager;
-    private static boolean flag = false;
+    private static boolean shouldHideKeyBoard = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,8 +42,16 @@ public class MainActivity extends AppCompatActivity implements
         logTodoListSize();
     }
 
-    private void logTodoListSize() {
-        Log.e("Todo list Size is: ", Integer.toString(todoItems.size())); //todo change to debug?
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d("back to main", "back to main");//todo delete
+        Log.d("***Todo list Size is: ", Integer.toString(todoItems.size())); //todo delete
+        if (getIntent().getBooleanExtra("shouldDelete", false)) {
+            todoItems.remove(getIntent().getIntExtra("position", 0));
+            saveTodoItemsListInMyPref();
+            notifyAdapterOnChanges();
+        }
     }
 
     private void initializeRecyclerView() {
@@ -58,30 +67,30 @@ public class MainActivity extends AppCompatActivity implements
 
         // specify an adapter (see also next example)
         todoItems = MyPreferences.loadData(getApplicationContext());
-        mAdapter = new MyAdapter(todoItems, this);
+        mAdapter = new MyAdapter(todoItems, this, getApplicationContext(), this);
         recyclerView.setAdapter(mAdapter);
     }
 
     public void btnCreateOnClick(View view) {
-        flag = true;
+        shouldHideKeyBoard = true;
         EditText et = findViewById(R.id.etInputText);
         String inputText = et.getText().toString();
         if (inputText.length() == 0) {
             toastMessage(EMPTY_MSG);
-            flag = false;
+            shouldHideKeyBoard = false;
         } else {
             TodoItem todoItem = new TodoItem(inputText, false);
             todoItems.add(todoItem);
             mAdapter.notifyItemChanged(todoItems.size() - 1);
             et.setText("");
+            saveTodoItemsListInMyPref();
         }
-        MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
         final View activityRootView = findViewById(R.id.activityRoot);
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
                 int heightDiff = activityRootView.getRootView().getHeight() - activityRootView.getHeight();
-                if (heightDiff > dpToPx(getApplicationContext(), 200) & flag) {
+                if (heightDiff > dpToPx(getApplicationContext(), 200) & shouldHideKeyBoard) {
                     // if more than 200 dp, it's probably a keyboard...
                     hideSoftKeyboard(MainActivity.this);
                 }
@@ -100,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements
                         Activity.INPUT_METHOD_SERVICE);
         inputMethodManager.hideSoftInputFromWindow(
                 activity.getCurrentFocus().getWindowToken(), 0);
-        flag = false;
+        shouldHideKeyBoard = false;
     }
 
     private void toastMessage(String message) {
@@ -119,11 +128,30 @@ public class MainActivity extends AppCompatActivity implements
             String todoText = todoItem.getDescription();
             toastMessage("TODO " + todoText + "is now DONE. BOOM!");
             todoItem.setDescription("done: " + todoText);
-            mAdapter.notifyDataSetChanged();
             todoItem.setIsDone(true);
-            MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
+            todoItems.set(position, todoItem);
+            saveTodoItemsListInMyPref();
+            notifyAdapterOnChanges();
         }
 
     }
 
+    @Override
+    public void onTodoLongClick(int position) {
+        Intent intent = new Intent(getApplicationContext(), DeleteTodoDialog.class);
+        intent.putExtra("position", position);
+        startActivity(intent);
+    }
+
+    private void notifyAdapterOnChanges() {
+        mAdapter.notifyDataSetChanged();
+    }
+
+    private void saveTodoItemsListInMyPref() {
+        MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
+    }
+
+    private void logTodoListSize() {
+        Log.e("Todo list Size is: ", Integer.toString(todoItems.size())); //todo change to debug?
+    }
 }
