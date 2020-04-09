@@ -4,4 +4,6 @@
     <string name="create">Create</string>
     <string name="your_message_will_be_represented_here">Your message Will be represented here</string>
     <string name="todo_item">Todo item</string>
+    <string name="yes_sure">yes sure!</string>
+    <string name="are_you_sure_to_delete">Are You Sure to delete?</string>
 </resources>
