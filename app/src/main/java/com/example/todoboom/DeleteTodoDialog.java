@@ -11,13 +11,13 @@ import androidx.appcompat.app.AppCompatActivity;
  * todo item is long pressed.
  */
 public class DeleteTodoDialog extends AppCompatActivity {
-    int todoItemPosition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_delete_todo_dialog);
-        todoItemPosition = getIntent().getIntExtra("position", 0);
+
+
     }
 
     /**
@@ -28,14 +28,16 @@ public class DeleteTodoDialog extends AppCompatActivity {
     public void onClickOk(View okButton) {
         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
         intent.putExtra("shouldDelete", true);
+        int todoItemPosition = getIntent().getIntExtra("position", 0);
         intent.putExtra("position", todoItemPosition);
         startActivity(intent);
         finish();
     }
 
     public void onClickCancel(View view) {
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-        intent.putExtra("shouldDelete", false);
+        Intent intent = new Intent(getApplicationContext(), EditCompletedTodoItemActivity.class);
+        int todoItemPosition = getIntent().getIntExtra("position", 0);
+        intent.putExtra("position", todoItemPosition);
         startActivity(intent);
         finish();
     }
