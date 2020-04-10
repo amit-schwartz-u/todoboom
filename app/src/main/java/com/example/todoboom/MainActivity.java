@@ -21,7 +21,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements
         MyAdapter.OnTodoListener, MyAdapter.OnTodoLongListener {
@@ -32,12 +34,12 @@ public class MainActivity extends AppCompatActivity implements
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager layoutManager;
     private static boolean shouldHideKeyBoard = false;
+    private static int idCounter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         initializeRecyclerView();
         logTodoListSize();
     }
@@ -47,11 +49,55 @@ public class MainActivity extends AppCompatActivity implements
         super.onResume();
         Log.d("back to main", "back to main");//todo delete
         Log.d("***Todo list Size is: ", Integer.toString(todoItems.size())); //todo delete
-        if (getIntent().getBooleanExtra("shouldDelete", false)) {
-            todoItems.remove(getIntent().getIntExtra("position", 0));
+        Intent callingIntent = getIntent();
+        int todoItemPosition = callingIntent.getIntExtra("position", 0);
+        if (callingIntent.getBooleanExtra("shouldDelete", false)) {
+            toastMessage("your todo was deleted");
+            todoItems.remove(todoItemPosition);
             saveTodoItemsListInMyPref();
-            notifyAdapterOnChanges();
+        } else if (shouldMarkTodoItemAsDone(callingIntent)) {
+            markTodoAsDone(todoItemPosition);
         }
+        else if(callingIntent.getBooleanExtra("shouldUnmarkDone", false)){
+            unmarkTodoFromDone(todoItemPosition);
+        }
+        if (shouldUpdateDescription(callingIntent)) {
+            updateTodoItem(callingIntent, todoItemPosition);
+        }
+        MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
+        notifyAdapterOnChanges();
+    }
+
+    private void unmarkTodoFromDone(int position) {
+        TodoItem todoItem = todoItems.get(position);
+        String todoText = todoItem.getDescription();
+        todoItem.setDescription(todoText.substring(6));
+        toastMessage("TODO " + todoText + " is now not DONE!");
+        todoItem.setIsDone(false);
+        todoItems.set(position, todoItem);
+    }
+
+    private void updateTodoItem(Intent callingIntent, int todoItemPosition) {
+        TodoItem todoItem = todoItems.get(todoItemPosition);
+        todoItem.setDescription(callingIntent.getStringExtra("updateDescription"));
+        todoItem.setEditTimestamp(callingIntent.getStringExtra("newEditTimestamp"));
+    }
+
+    private boolean shouldUpdateDescription(Intent callingIntent) {
+        return callingIntent.getBooleanExtra("shouldUpdateDescription", false);
+    }
+
+    private boolean shouldMarkTodoItemAsDone(Intent callingIntent) {
+        return callingIntent.getBooleanExtra("shouldMarkAsDone", false);
+    }
+
+    private void markTodoAsDone(int position) {
+        TodoItem todoItem = todoItems.get(position);
+        String todoText = todoItem.getDescription();
+        toastMessage("TODO " + todoText + " is now DONE. BOOM!");
+        todoItem.setDescription("done: " + todoText);
+        todoItem.setIsDone(true);
+        todoItems.set(position, todoItem);
     }
 
     /**
@@ -82,10 +128,9 @@ public class MainActivity extends AppCompatActivity implements
             toastMessage(EMPTY_MSG);
             shouldHideKeyBoard = false;
         } else {
-            TodoItem todoItem = new TodoItem(inputText, false);
-            todoItems.add(todoItem);
-            mAdapter.notifyItemChanged(todoItems.size() - 1);
+            addNewTodoItemToList(inputText);
             et.setText("");
+            mAdapter.notifyItemChanged(todoItems.size() - 1);
             saveTodoItemsListInMyPref();
         }
         final View activityRootView = findViewById(R.id.activityRoot);
@@ -99,6 +144,15 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
         });
+    }
+
+    private void addNewTodoItemToList(String inputText) {
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        Date date = ts;
+        String timestampStr = date.toString();
+        TodoItem todoItem = new TodoItem(inputText, false, timestampStr, timestampStr, idCounter);
+        idCounter += 1;
+        todoItems.add(todoItem);
     }
 
     public static float dpToPx(Context context, float valueInDp) {
@@ -115,7 +169,7 @@ public class MainActivity extends AppCompatActivity implements
         shouldHideKeyBoard = false;
     }
 
-    private void toastMessage(String message) {
+    public void toastMessage(String message) {
         Toast newToast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT);
         newToast.setGravity(Gravity.TOP | Gravity.LEFT, 150, 50);
         ViewGroup group = (ViewGroup) newToast.getView();
@@ -128,22 +182,32 @@ public class MainActivity extends AppCompatActivity implements
     public void onTodoClick(int position) {
         TodoItem todoItem = todoItems.get(position);
         if (!todoItem.isDone()) {
-            String todoText = todoItem.getDescription();
-            toastMessage("TODO " + todoText + "is now DONE. BOOM!");
-            todoItem.setDescription("done: " + todoText);
-            todoItem.setIsDone(true);
-            todoItems.set(position, todoItem);
-            saveTodoItemsListInMyPref();
-            notifyAdapterOnChanges();
+            callNotCompletedActivity(position);
+        }
+        else {
+            callEditCompletedTodoItemActivity(position);
         }
 
     }
 
-    @Override
-    public void onTodoLongClick(int position) {
-        Intent intent = new Intent(getApplicationContext(), DeleteTodoDialog.class);
+    private void callEditCompletedTodoItemActivity(int position) {
+        Intent intent = new Intent(getApplicationContext(), EditCompletedTodoItemActivity.class);
         intent.putExtra("position", position);
         startActivity(intent);
+    }
+
+    private void callNotCompletedActivity(int position) {
+        Intent intent = new Intent(getApplicationContext(), EditNotCompletedTodoItemActivity.class);
+        intent.putExtra("position", position);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onTodoLongClick(int position) {
+        //todo - can be deleted from ex4
+//        Intent intent = new Intent(getApplicationContext(), DeleteTodoDialog.class);
+//        intent.putExtra("position", position);
+//        startActivity(intent);
     }
 
     private void notifyAdapterOnChanges() {

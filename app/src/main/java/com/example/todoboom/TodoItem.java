@@ -1,15 +1,13 @@
 package com.example.todoboom;
 
-import java.util.Date;
-
 public class TodoItem {
     String description;
     Boolean isDone;
-    Date creationTimestamp;
-    Date editTimestamp;
+    String creationTimestamp;
+    String editTimestamp;
     int id;
 
-    public TodoItem(String description, Boolean isDone, Date creationTimestamp, Date editTimestamp, int id) {
+    public TodoItem(String description, Boolean isDone, String creationTimestamp, String editTimestamp, int id) {
         this.description = description;
         this.isDone = isDone;
         this.creationTimestamp = creationTimestamp;
@@ -33,19 +31,19 @@ public class TodoItem {
         this.isDone = isDone;
     }
 
-    public Date getCreationTimestamp() {
+    public String getCreationTimestamp() {
         return creationTimestamp;
     }
 
-    public void setCreationTimestamp(Date creationTimestamp) {
+    public void setCreationTimestamp(String creationTimestamp) {
         this.creationTimestamp = creationTimestamp;
     }
 
-    public Date getEditTimestamp() {
+    public String getEditTimestamp() {
         return editTimestamp;
     }
 
-    public void setEditTimestamp(Date editTimestamp) {
+    public void setEditTimestamp(String editTimestamp) {
         this.editTimestamp = editTimestamp;
     }
 
