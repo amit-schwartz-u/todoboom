@@ -2,17 +2,22 @@ package com.example.todoboom;
 
 public class TodoItem {
     String description;
-    Boolean isDone;
+    int isDone;
     String creationTimestamp;
     String editTimestamp;
     int id;
+    String dbId;
 
-    public TodoItem(String description, Boolean isDone, String creationTimestamp, String editTimestamp, int id) {
+    public TodoItem(){
+    };
+
+    public TodoItem(String description, int isDone, String creationTimestamp, String editTimestamp, int id, String dbId) {
         this.description = description;
         this.isDone = isDone;
         this.creationTimestamp = creationTimestamp;
         this.editTimestamp = editTimestamp;
         this.id = id;
+        this.dbId = dbId;
     }
 
     public String getDescription() {
@@ -23,11 +28,11 @@ public class TodoItem {
         this.description = description;
     }
 
-    public Boolean isDone() {
+    public int isDone() {
         return isDone;
     }
 
-    public void setIsDone(Boolean isDone) {
+    public void setIsDone(int isDone) {
         this.isDone = isDone;
     }
 
@@ -53,6 +58,14 @@ public class TodoItem {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public String getDbId() {
+        return dbId;
+    }
+
+    public void setDbId(String dbId) {
+        this.dbId = dbId;
     }
 
 }

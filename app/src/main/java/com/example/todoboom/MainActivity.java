@@ -1,5 +1,6 @@
 package com.example.todoboom;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,6 +22,15 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,10 +46,17 @@ public class MainActivity extends AppCompatActivity implements
     private static boolean shouldHideKeyBoard = false;
     private static int idCounter = 0;
 
+    /* Firebase */
+    private FirebaseFirestore db;
+    private CollectionReference todoItemsRef;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        db = FirebaseFirestore.getInstance();
+        todoItemsRef = db.collection("todoList");
+        setFireStore();
         initializeRecyclerView();
         logTodoListSize();
     }
@@ -53,8 +70,8 @@ public class MainActivity extends AppCompatActivity implements
         int todoItemPosition = callingIntent.getIntExtra("position", 0);
         if (callingIntent.getBooleanExtra("shouldDelete", false)) {
             toastMessage("your todo was deleted");
-            todoItems.remove(todoItemPosition);
-            saveTodoItemsListInMyPref();
+            deleteTodoItemFromDbRef(todoItems.get(todoItemPosition)); //todo send something else
+            saveTodoItemsListInMyPref();//todo check*************************************
         } else if (shouldMarkTodoItemAsDone(callingIntent)) {
             markTodoAsDone(todoItemPosition);
         }
@@ -65,7 +82,43 @@ public class MainActivity extends AppCompatActivity implements
             updateTodoItem(callingIntent, todoItemPosition);
         }
         MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
+     //todo save to firestore
         notifyAdapterOnChanges();
+    }
+
+    private void deleteTodoItemFromDbRef(TodoItem todoItem) {
+        DocumentReference todoItemRef = getTodoItemDocumentReference(todoItem);
+        todoItemRef.delete(); //todo add listiner
+    }
+
+    private DocumentReference getTodoItemDocumentReference(final TodoItem todoItem) {
+        return todoItemsRef.document(todoItem.getDbId());
+    }
+
+    private void setFireStore() {
+        todoItemsRef.get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            ArrayList<TodoItem> todoItemsFromDb = new ArrayList<TodoItem>();
+                            Log.e("successful", "successful get todoItems");
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                todoItemsFromDb.add(document.toObject(TodoItem.class));
+                            }
+                            Log.e("successful", "todoItemsFromDb "+ todoItemsFromDb.size());
+
+                            todoItems.clear();
+                            for(TodoItem todoItem: todoItemsFromDb) {
+                                todoItems.add(todoItem);
+                            }
+                            saveTodoItemsListInMyPref();
+                            notifyAdapterOnChanges();
+                        } else {
+                            Log.e("error", "Error getting documents.", task.getException());
+                        }
+                    }
+                });
     }
 
     private void unmarkTodoFromDone(int position) {
@@ -73,14 +126,16 @@ public class MainActivity extends AppCompatActivity implements
         String todoText = todoItem.getDescription();
         todoItem.setDescription(todoText.substring(6));
         toastMessage("TODO " + todoText + " is now not DONE!");
-        todoItem.setIsDone(false);
+        todoItem.setIsDone(0);
         todoItems.set(position, todoItem);
+        saveTodoItemChangeInFireStore(todoItem);
     }
 
     private void updateTodoItem(Intent callingIntent, int todoItemPosition) {
         TodoItem todoItem = todoItems.get(todoItemPosition);
         todoItem.setDescription(callingIntent.getStringExtra("updateDescription"));
         todoItem.setEditTimestamp(callingIntent.getStringExtra("newEditTimestamp"));
+        saveTodoItemChangeInFireStore(todoItem);
     }
 
     private boolean shouldUpdateDescription(Intent callingIntent) {
@@ -96,8 +151,14 @@ public class MainActivity extends AppCompatActivity implements
         String todoText = todoItem.getDescription();
         toastMessage("TODO " + todoText + " is now DONE. BOOM!");
         todoItem.setDescription("done: " + todoText);
-        todoItem.setIsDone(true);
+        todoItem.setIsDone(1);
         todoItems.set(position, todoItem);
+        saveTodoItemChangeInFireStore(todoItem);
+    }
+
+    private void saveTodoItemChangeInFireStore(TodoItem todoItem) {
+        DocumentReference todoItemRef = getTodoItemDocumentReference(todoItem);
+        todoItemRef.set(todoItem);
     }
 
     /**
@@ -130,8 +191,7 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             addNewTodoItemToList(inputText);
             et.setText("");
-            mAdapter.notifyItemChanged(todoItems.size() - 1);
-            saveTodoItemsListInMyPref();
+
         }
         final View activityRootView = findViewById(R.id.activityRoot);
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -150,9 +210,20 @@ public class MainActivity extends AppCompatActivity implements
         Timestamp ts = new Timestamp(System.currentTimeMillis());
         Date date = ts;
         String timestampStr = date.toString();
-        TodoItem todoItem = new TodoItem(inputText, false, timestampStr, timestampStr, idCounter);
+
+        final TodoItem todoItem = new TodoItem(inputText, 0, timestampStr, timestampStr, idCounter, null);
         idCounter += 1;
-        todoItems.add(todoItem);
+        todoItemsRef.add(todoItem).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+            @Override
+            public void onSuccess(DocumentReference documentReference) {
+                todoItem.setDbId(documentReference.getId());
+                todoItems.add(todoItem);
+                mAdapter.notifyItemChanged(todoItems.size() - 1);
+                saveTodoItemsListInMyPref();
+                notifyAdapterOnChanges();
+                Log.e("Success", "Success adding todo item to todoitems list");
+            }
+        });
     }
 
     public static float dpToPx(Context context, float valueInDp) {
@@ -181,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onTodoClick(int position) {
         TodoItem todoItem = todoItems.get(position);
-        if (!todoItem.isDone()) {
+        if (!(todoItem.isDone() ==1)){
             callNotCompletedActivity(position);
         }
         else {
