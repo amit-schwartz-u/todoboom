@@ -56,9 +56,8 @@ public class MainActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_main);
         db = FirebaseFirestore.getInstance();
         todoItemsRef = db.collection("todoList");
-        setFireStore();
         initializeRecyclerView();
-        logTodoListSize();
+        setFireStore();
     }
 
     @Override
@@ -91,7 +90,7 @@ public class MainActivity extends AppCompatActivity implements
         todoItemRef.delete(); //todo add listiner
     }
 
-    private DocumentReference getTodoItemDocumentReference(final TodoItem todoItem) {
+    private DocumentReference getTodoItemDocumentReference(TodoItem todoItem) {
         return todoItemsRef.document(todoItem.getDbId());
     }
 
@@ -106,12 +105,11 @@ public class MainActivity extends AppCompatActivity implements
                             for (QueryDocumentSnapshot document : task.getResult()) {
                                 todoItemsFromDb.add(document.toObject(TodoItem.class));
                             }
-                            Log.e("successful", "todoItemsFromDb "+ todoItemsFromDb.size());
-
                             todoItems.clear();
                             for(TodoItem todoItem: todoItemsFromDb) {
                                 todoItems.add(todoItem);
                             }
+                            logTodoListSize();
                             saveTodoItemsListInMyPref();
                             notifyAdapterOnChanges();
                         } else {
@@ -126,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements
         String todoText = todoItem.getDescription();
         todoItem.setDescription(todoText.substring(6));
         toastMessage("TODO " + todoText + " is now not DONE!");
-        todoItem.setIsDone(0);
+        todoItem.setDone(false);
         todoItems.set(position, todoItem);
         saveTodoItemChangeInFireStore(todoItem);
     }
@@ -151,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements
         String todoText = todoItem.getDescription();
         toastMessage("TODO " + todoText + " is now DONE. BOOM!");
         todoItem.setDescription("done: " + todoText);
-        todoItem.setIsDone(1);
+        todoItem.setDone(true);
         todoItems.set(position, todoItem);
         saveTodoItemChangeInFireStore(todoItem);
     }
@@ -177,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // specify an adapter (see also next example)
         todoItems = MyPreferences.loadData(getApplicationContext());
+
         mAdapter = new MyAdapter(todoItems, this, getApplicationContext(), this);
         recyclerView.setAdapter(mAdapter);
     }
@@ -191,7 +190,8 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             addNewTodoItemToList(inputText);
             et.setText("");
-
+            mAdapter.notifyItemChanged(todoItems.size() - 1);
+            saveTodoItemsListInMyPref();
         }
         final View activityRootView = findViewById(R.id.activityRoot);
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -210,15 +210,15 @@ public class MainActivity extends AppCompatActivity implements
         Timestamp ts = new Timestamp(System.currentTimeMillis());
         Date date = ts;
         String timestampStr = date.toString();
-
-        final TodoItem todoItem = new TodoItem(inputText, 0, timestampStr, timestampStr, idCounter, null);
+        final TodoItem todoItem = new TodoItem(inputText, false, timestampStr, timestampStr, idCounter, null);
         idCounter += 1;
+        todoItems.add(todoItem);
         todoItemsRef.add(todoItem).addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
             @Override
             public void onSuccess(DocumentReference documentReference) {
                 todoItem.setDbId(documentReference.getId());
-                todoItems.add(todoItem);
-                mAdapter.notifyItemChanged(todoItems.size() - 1);
+                todoItems.set(todoItems.size()-1, todoItem);
+                saveTodoItemChangeInFireStore(todoItem);
                 saveTodoItemsListInMyPref();
                 notifyAdapterOnChanges();
                 Log.e("Success", "Success adding todo item to todoitems list");
@@ -252,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onTodoClick(int position) {
         TodoItem todoItem = todoItems.get(position);
-        if (!(todoItem.isDone() ==1)){
+        if (!(todoItem.isDone())){
             callNotCompletedActivity(position);
         }
         else {

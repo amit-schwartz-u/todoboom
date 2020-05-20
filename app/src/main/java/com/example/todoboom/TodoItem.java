@@ -2,7 +2,7 @@ package com.example.todoboom;
 
 public class TodoItem {
     String description;
-    int isDone;
+    Boolean done;
     String creationTimestamp;
     String editTimestamp;
     int id;
@@ -11,9 +11,9 @@ public class TodoItem {
     public TodoItem(){
     };
 
-    public TodoItem(String description, int isDone, String creationTimestamp, String editTimestamp, int id, String dbId) {
+    public TodoItem(String description, Boolean done, String creationTimestamp, String editTimestamp, int id, String dbId) {
         this.description = description;
-        this.isDone = isDone;
+        this.done = done;
         this.creationTimestamp = creationTimestamp;
         this.editTimestamp = editTimestamp;
         this.id = id;
@@ -28,12 +28,12 @@ public class TodoItem {
         this.description = description;
     }
 
-    public int isDone() {
-        return isDone;
+    public Boolean isDone() {
+        return done;
     }
 
-    public void setIsDone(int isDone) {
-        this.isDone = isDone;
+    public void setDone(Boolean done) {
+        this.done = done;
     }
 
     public String getCreationTimestamp() {
