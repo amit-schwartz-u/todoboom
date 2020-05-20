@@ -63,14 +63,12 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("back to main", "back to main");//todo delete
-        Log.d("***Todo list Size is: ", Integer.toString(todoItems.size())); //todo delete
         Intent callingIntent = getIntent();
         int todoItemPosition = callingIntent.getIntExtra("position", 0);
         if (callingIntent.getBooleanExtra("shouldDelete", false)) {
             toastMessage("your todo was deleted");
-            deleteTodoItemFromDbRef(todoItems.get(todoItemPosition)); //todo send something else
-            saveTodoItemsListInMyPref();//todo check*************************************
+            deleteTodoItemFromDbRef(todoItems.get(todoItemPosition));
+            saveTodoItemsListInMyPref();
         } else if (shouldMarkTodoItemAsDone(callingIntent)) {
             markTodoAsDone(todoItemPosition);
         }
@@ -81,13 +79,17 @@ public class MainActivity extends AppCompatActivity implements
             updateTodoItem(callingIntent, todoItemPosition);
         }
         MyPreferences.saveStateToMyPref(getApplicationContext(), todoItems);
-     //todo save to firestore
         notifyAdapterOnChanges();
     }
 
     private void deleteTodoItemFromDbRef(TodoItem todoItem) {
         DocumentReference todoItemRef = getTodoItemDocumentReference(todoItem);
-        todoItemRef.delete(); //todo add listiner
+        todoItemRef.delete().addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                Log.d("Debug", "deleted todoItem");
+            }
+        });
     }
 
     private DocumentReference getTodoItemDocumentReference(TodoItem todoItem) {
@@ -224,6 +226,7 @@ public class MainActivity extends AppCompatActivity implements
                 Log.e("Success", "Success adding todo item to todoitems list");
             }
         });
+
     }
 
     public static float dpToPx(Context context, float valueInDp) {
